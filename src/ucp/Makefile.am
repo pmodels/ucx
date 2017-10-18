@@ -14,11 +14,13 @@ libucp_la_LDFLAGS  = -ldl -version-info $(SOVERSION)
 libucp_la_LIBADD   = ../ucs/libucs.la ../uct/libuct.la
 libucp_ladir       = $(includedir)/ucp
 
+if !EMBEDDED
 nobase_dist_libucp_la_HEADERS = \
 	api/ucp_compat.h \
 	api/ucp_def.h \
 	api/ucp_version.h \
 	api/ucp.h
+endif
 
 noinst_HEADERS = \
 	am/eager.inl \
@@ -85,16 +87,20 @@ noinst_HEADERS = \
 devel_headers = \
 	core/ucp_resource.h
 
+if !EMBEDDED
 if INSTALL_DEVEL_HEADERS
 nobase_dist_libucp_la_HEADERS += $(devel_headers)
 else
 noinst_HEADERS += $(devel_headers)
 endif
+endif
 
+if !EMBEDDED
 if ENABLE_EXPERIMENTAL_API
 nobase_dist_libucp_la_HEADERS += api/ucpx.h
 else
 noinst_HEADERS                += api/ucpx.h
+endif
 endif
 
 libucp_la_SOURCES = \

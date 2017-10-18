@@ -14,8 +14,10 @@ libucm_la_LDFLAGS  = $(UCM_MODULE_LDFLAGS) \
 libucm_la_CPPFLAGS = $(BASE_CPPFLAGS) -DUCM_MALLOC_PREFIX=ucm_dl
 libucm_la_CFLAGS   = $(BASE_CFLAGS) $(CFLAGS_NO_DEPRECATED)
 
+if !EMBEDDED
 nobase_dist_libucm_la_HEADERS = \
 	api/ucm.h
+endif
 
 noinst_HEADERS = \
 	event/event.h \
