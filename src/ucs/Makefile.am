@@ -20,6 +20,7 @@ libucs_la_LDFLAGS  = -ldl $(BFD_LDFLAGS) -version-info $(SOVERSION)
 libucs_ladir       = $(includedir)/ucs
 libucs_la_LIBADD   = $(LIBM) $(top_builddir)/src/ucm/libucm.la $(BFD_LIBS)
 
+if !EMBEDDED
 nobase_dist_libucs_la_HEADERS = \
 	arch/aarch64/bitops.h \
 	arch/ppc64/bitops.h \
@@ -88,6 +89,7 @@ nobase_dist_libucs_la_HEADERS = \
 	arch/ppc64/global_opts.h \
 	arch/rv64/global_opts.h \
 	arch/global_opts.h
+endif
 
 noinst_HEADERS = \
 	arch/aarch64/cpu.h \
