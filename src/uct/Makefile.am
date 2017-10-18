@@ -16,11 +16,13 @@ libuct_la_LIBADD   = $(top_builddir)/src/ucs/libucs.la
 libuct_la_LDFLAGS  = -ldl -version-info $(SOVERSION)
 libuct_ladir       = $(includedir)/uct
 
+if !EMBEDDED
 nobase_dist_libuct_la_HEADERS = \
 	api/tl.h \
 	api/uct_def.h \
 	api/uct.h \
 	api/version.h
+endif
 
 noinst_HEADERS = \
 	base/uct_md.h \
