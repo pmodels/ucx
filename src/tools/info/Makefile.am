@@ -5,7 +5,9 @@
 # See file LICENSE for terms.
 #
 
+if !EMBEDDED
 bin_PROGRAMS = ucx_info
+endif
 
 BUILT_SOURCES  = build_config.h
 DISTCLEANFILES = build_config.h

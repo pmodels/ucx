@@ -16,7 +16,9 @@ noinst_HEADERS = \
 	perftest.h \
 	api/libperf.h
 
+if !EMBEDDED
 bin_PROGRAMS = ucx_perftest
+endif
 
 ucx_perftest_SOURCES = \
 	perftest.c \
