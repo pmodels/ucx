@@ -19,6 +19,7 @@
 #include <ucp/core/ucp_ep.inl>
 #include <string.h>
 #include <inttypes.h>
+#include <float.h>
 
 #define UCP_WIREUP_RMA_BW_TEST_MSG_SIZE    262144
 #define UCP_WIREUP_UCT_EVENT_CAP_FLAGS     (UCT_IFACE_FLAG_EVENT_SEND_COMP | \
@@ -1427,28 +1428,72 @@ ucp_wireup_is_md_map_count_valid(ucp_context_h context, ucp_md_map_t md_map)
 }
 
 static unsigned
+ucp_wireup_add_fast_lanes(const ucp_wireup_select_params_t *select_params,
+                          const ucp_wireup_select_info_t *sinfo_array,
+                          unsigned num_sinfo, ucp_worker_h worker,
+                          ucp_lane_type_t lane_type,
+                          ucp_wireup_select_context_t *select_ctx)
+{
+    unsigned num_lanes     = 0;
+    double min_overhead    = DBL_MAX;
+    const double max_ratio = 1. / 200;
+    ucs_status_t status;
+    int show_error;
+    unsigned sinfo_index;
+    const uct_iface_attr_t *iface_attr;
+
+    /* Iterate over all elements and calculate max BW */
+    for (sinfo_index = 0; sinfo_index < num_sinfo; ++sinfo_index) {
+        iface_attr   = ucp_worker_iface_get_attr(
+                worker, sinfo_array[sinfo_index].rsc_index);
+        min_overhead = ucs_min(iface_attr->overhead, min_overhead);
+    }
+
+    /* Compare each element to max BW and filter only fast lanes */
+    for (sinfo_index = 0; sinfo_index < num_sinfo; ++sinfo_index) {
+        iface_attr = ucp_worker_iface_get_attr(
+                worker, sinfo_array[sinfo_index].rsc_index);
+
+        if ((min_overhead < DBL_MAX) &&
+            ((min_overhead / iface_attr->overhead) < max_ratio)) {
+            continue;
+        }
+
+        show_error = (num_lanes == 0);
+        status     = ucp_wireup_add_lane(select_params, &sinfo_array[sinfo_index],
+                                         lane_type, show_error, select_ctx);
+        if (status != UCS_OK) {
+            break;
+        }
+
+        num_lanes++;
+    }
+
+    return num_lanes;
+}
+
+static unsigned
 ucp_wireup_add_bw_lanes(const ucp_wireup_select_params_t *select_params,
                         ucp_wireup_select_bw_info_t *bw_info,
                         ucp_tl_bitmap_t tl_bitmap, ucp_lane_index_t excl_lane,
                         ucp_wireup_select_context_t *select_ctx)
 {
-    ucp_ep_h ep                          = select_params->ep;
-    ucp_context_h context                = ep->worker->context;
-    ucp_wireup_select_info_t sinfo       = {0};
-    ucp_wireup_dev_usage_count dev_count = {};
+    ucp_ep_h ep                                  = select_params->ep;
+    ucp_context_h context                        = ep->worker->context;
+    ucp_wireup_select_info_t sinfo[UCP_MAX_LANES] = {{0}};
+    ucp_wireup_dev_usage_count dev_count         = {};
     const uct_iface_attr_t *iface_attr;
     const ucp_address_entry_t *ae;
     ucs_status_t status;
-    unsigned num_lanes;
+    unsigned num_sinfo;
     uint64_t local_dev_bitmap;
     uint64_t remote_dev_bitmap;
     ucp_rsc_index_t dev_index;
     ucp_md_map_t md_map;
     ucp_rsc_index_t rsc_index;
     unsigned addr_index;
-    int show_error;
 
-    num_lanes             = 0;
+    num_sinfo             = 0;
     md_map                = bw_info->md_map;
     local_dev_bitmap      = bw_info->local_dev_bitmap;
     remote_dev_bitmap     = bw_info->remote_dev_bitmap;
@@ -1457,30 +1502,22 @@ ucp_wireup_add_bw_lanes(const ucp_wireup_select_params_t *select_params,
     /* lookup for requested number of lanes or limit of MD map
      * (we have to limit MD's number to avoid malloc in
      * memory registration) */
-    while ((num_lanes < bw_info->max_lanes) &&
+    while ((num_sinfo < bw_info->max_lanes) &&
            ucp_wireup_is_md_map_count_valid(context, md_map)) {
         if (excl_lane == UCP_NULL_LANE) {
             status = ucp_wireup_select_transport(select_ctx, select_params,
                                                  &bw_info->criteria, tl_bitmap,
                                                  UINT64_MAX, local_dev_bitmap,
-                                                 remote_dev_bitmap, 0, &sinfo);
+                                                 remote_dev_bitmap, 0, &sinfo[num_sinfo]);
             if (status != UCS_OK) {
                 break;
             }
 
-            rsc_index        = sinfo.rsc_index;
-            addr_index       = sinfo.addr_index;
-            dev_index        = context->tl_rscs[rsc_index].dev_index;
-            sinfo.path_index = dev_count.local[dev_index];
-            show_error       = (num_lanes == 0);
-            status           = ucp_wireup_add_lane(select_params, &sinfo,
-                                                   bw_info->criteria.lane_type,
-                                                   show_error, select_ctx);
-            if (status != UCS_OK) {
-                break;
-            }
-
-            num_lanes++;
+            rsc_index                   = sinfo[num_sinfo].rsc_index;
+            addr_index                  = sinfo[num_sinfo].addr_index;
+            dev_index                   = context->tl_rscs[rsc_index].dev_index;
+            sinfo[num_sinfo].path_index = dev_count.local[dev_index];
+            num_sinfo++;
         } else {
             /* disqualify/count lane_desc_idx */
             addr_index      = select_ctx->lane_descs[excl_lane].addr_index;
@@ -1510,7 +1547,9 @@ ucp_wireup_add_bw_lanes(const ucp_wireup_select_params_t *select_params,
 
     bw_info->criteria.arg = NULL; /* To suppress compiler warning */
 
-    return num_lanes;
+    return ucp_wireup_add_fast_lanes(select_params, sinfo, num_sinfo,
+                                     ep->worker, bw_info->criteria.lane_type,
+                                     select_ctx);
 }
 
 static ucs_status_t
