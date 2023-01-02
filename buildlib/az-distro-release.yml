@@ -11,22 +11,48 @@ jobs:
       ${{ if eq(variables['Build.Reason'], 'PullRequest') }}:
         POSTFIX: ucx-pr$(System.PullRequest.PullRequestNumber)
 
+    strategy:
+      matrix:
+        # x86_64
+        centos7_cuda11_x86_64:
+          build_container: centos7_cuda11_x86_64
+          artifact_name: $(POSTFIX)-centos7-mofed5-cuda11-x86_64.tar.bz2
+          demands: ucx_docker -equals yes
+        # centos8_cuda11_x86_64:
+        #   build_container: centos8_cuda11_x86_64
+        #   artifact_name: $(POSTFIX)-centos8-mofed5-cuda11-x86_64.tar.bz2
+        #   demands: ucx_docker -equals yes
+        # ubuntu16_cuda11_x86_64:
+        #   build_container: ubuntu16_cuda11_x86_64
+        #   artifact_name: $(POSTFIX)-ubuntu16.04-mofed5-cuda11-x86_64.deb
+        #   demands: ucx_docker -equals yes
+        # ubuntu18_cuda11_x86_64:
+        #   build_container: ubuntu18_cuda11_x86_64
+        #   artifact_name: $(POSTFIX)-ubuntu18.04-mofed5-cuda11-x86_64.deb
+        #   demands: ucx_docker -equals yes
+        # ubuntu20_cuda11_x86_64:
+        #   build_container: ubuntu20_cuda11_x86_64
+        #   artifact_name: $(POSTFIX)-ubuntu20.04-mofed5-cuda11-x86_64.deb
+        #   demands: ucx_docker -equals yes
+        # aarch64
+        centos8_cuda11_aarch64:
+          build_container: centos8_cuda11_aarch64
+          artifact_name: $(POSTFIX)-centos8-mofed5-cuda11-aarch64.tar.bz2
+          demands: ucx_bf -equals yes
+        # ubuntu18_cuda11_aarch64:
+        #   build_container: ubuntu18_cuda11_aarch64
+        #   artifact_name: $(POSTFIX)-ubuntu18.04-mofed5-cuda11-aarch64.deb
+        #   demands: ucx_bf -equals yes
+        # ubuntu20_cuda11_aarch64:
+        #   build_container: ubuntu20_cuda11_aarch64
+        #   artifact_name: $(POSTFIX)-ubuntu20.04-mofed5-cuda11-aarch64.deb
+        #   demands: ucx_bf -equals yes
+
     pool:
       name: MLNX
       demands:
-        - ucx_bf -equals yes
-
-    strategy:
-      matrix:
-        centos8_cuda11:
-          build_container: centos8_cuda11
-          artifact_name: $(POSTFIX)-centos8-mofed5-cuda11-aarch64.tar.bz2
-        ubuntu18_cuda11:
-          build_container: ubuntu18_cuda11
-          artifact_name: $(POSTFIX)-ubuntu18.04-mofed5-cuda11-aarch64.deb
-        ubuntu20_cuda11:
-          build_container: ubuntu20_cuda11
-          artifact_name: $(POSTFIX)-ubuntu20.04-mofed5-cuda11-aarch64.deb
+      # - $(demands)
+      - ${{ matrix.demands }}
 
     container: $[ variables['build_container'] ]
 

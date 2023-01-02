@@ -2,9 +2,9 @@
 # This pipeline to be run on tags creation
 
 trigger:
-  # branches:   # TMP - start upon push
-  #   include:
-  #   - arm
+  branches:   # TMP - start upon push
+    include:
+    - v1.13.100-intergation
   tags:
     include:
       - v*
@@ -15,11 +15,23 @@ pr:
 
 resources:
   containers:
-    - container: centos8_cuda11
+    # x86_64
+    - container: centos7_cuda11_x86_64
+      image: rdmz-harbor.rdmz.labs.mlnx/ucx/x86_64/centos7-mofed5-cuda11:2
+    - container: centos8_cuda11_x86_64
+      image: rdmz-harbor.rdmz.labs.mlnx/ucx/x86_64/centos8-mofed5-cuda11:2
+    - container: ubuntu16_cuda11_x86_64
+      image: rdmz-harbor.rdmz.labs.mlnx/ucx/x86_64/ubuntu16.04-mofed5-cuda11:3
+    - container: ubuntu18_cuda11_x86_64
+      image: rdmz-harbor.rdmz.labs.mlnx/ucx/x86_64/ubuntu18.04-mofed5-cuda11:3
+    - container: ubuntu20_cuda11_x86_64
+      image: rdmz-harbor.rdmz.labs.mlnx/ucx/x86_64/ubuntu20.04-mofed5-cuda11:3
+    # aarch64
+    - container: centos8_cuda11_aarch64
       image: rdmz-harbor.rdmz.labs.mlnx/ucx/aarch64/centos8-mofed5-cuda11:2
-    - container: ubuntu18_cuda11
+    - container: ubuntu18_cuda11_aarch64
       image: rdmz-harbor.rdmz.labs.mlnx/ucx/aarch64/ubuntu18.04-mofed5-cuda11:3
-    - container: ubuntu20_cuda11
+    - container: ubuntu20_cuda11_aarch64
       image: rdmz-harbor.rdmz.labs.mlnx/ucx/aarch64/ubuntu20.04-mofed5-cuda11:3
 
 stages:
@@ -51,11 +63,25 @@ stages:
     jobs:
       - job: DraftRelease
         displayName: Create draft release
-        container: centos8_cuda11
+
+        strategy:
+          matrix:
+            x86_64:
+              container: centos7_cuda11_x86_64
+              demands: ucx_docker -equals yes
+            aarch64:
+              container: centos8_cuda11_aarch64
+              demands: ucx_bf -equals yes
+          maxParallel: 2
+
+        container: $(container)
         pool:
           name: MLNX
           demands:
-          - ucx_bf -equals yes
+          # - $(demands)
+          - ${{ matrix.demands }}
+
+
         steps:
         - checkout: self
           clean: true

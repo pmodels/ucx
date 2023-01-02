@@ -6,13 +6,23 @@ parameters:
 jobs:
   - job: jucx_release
 
+    strategy:
+      matrix:
+        x86_64:
+          container: centos7_cuda11_x86_64
+          demands: ucx_docker -equals yes
+        aarch64:
+          container: centos8_cuda11_aarch64
+          demands: ucx_bf -equals yes
+      maxParallel: 2
+
     pool:
       name: MLNX
       demands:
-        - ucx_bf -equals yes
+      - $(demands)
 
-    # we need to use lowest version for compatible
-    container: centos8_cuda11
+    # we need to use lowest version for compatibility
+    container: $(container)
 
     steps:
       - checkout: self
