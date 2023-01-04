@@ -16,7 +16,7 @@ CUDA_OPT = $(shell echo ${DEB_BUILD_PROFILES} | grep -qw cuda \
 	dh $@ 
 
 override_dh_auto_configure:
-	./contrib/configure-release-mt --prefix=/usr \
+	../contrib/configure-release-mt --prefix=/usr \
 		--enable-examples --with-java=no \
 		$(CUDA_OPT)
 	chmod +x debian/rules
