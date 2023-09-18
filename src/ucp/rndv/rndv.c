@@ -122,7 +122,7 @@ ucp_rndv_is_put_pipeline_needed(uintptr_t remote_address, size_t length,
                                 const ucp_ep_rndv_zcopy_config_t *put_zcopy,
                                 int is_get_zcopy_failed)
 {
-    if ((remote_address != 0) &&
+    if ((remote_address == 0) ||
         (ucp_rkey_packed_mem_type(rkey_buf) == UCS_MEMORY_TYPE_HOST)) {
         return 0;
     }
