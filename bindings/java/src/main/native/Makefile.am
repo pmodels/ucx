@@ -129,7 +129,6 @@ publish-snapshot:
 
 publish-release:
 	@make set-version JUCX_VERSION=${JUCX_VERSION}
-	@make repack-jar
 	@make check-jar
 	@make publish
 
