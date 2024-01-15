@@ -123,8 +123,6 @@ check-jar:
 # Publish JUCX jar to maven central
 publish-snapshot:
 	@make set-version JUCX_VERSION=@VERSION@-SNAPSHOT
-	@make repack-jar
-	@make check-jar
 	@make publish
 
 publish-release:
